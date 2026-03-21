@@ -1,0 +1,16 @@
+# Compiled Java class files
+bin/
+*.class
+
+# SQLite database WAL/SHM temp files
+*.db-shm
+*.db-wal
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
