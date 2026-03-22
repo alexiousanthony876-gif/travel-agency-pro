@@ -11,9 +11,20 @@ const TWILIO_WHATSAPP_NUMBER = process.env.TWILIO_WHATSAPP_NUMBER || 'whatsapp:+
 export interface WhatsAppMessageParams {
   userId: number;
   phoneNumber: string;
-  messageType: 'booking_confirmation' | 'payment_receipt' | 'reminder' | 'cancellation';
+  messageType: 'otp' | 'booking_confirmation' | 'payment_receipt' | 'reminder' | 'cancellation';
   bookingId?: number;
   data?: Record<string, any>;
+}
+
+// OTP message template
+export async function generateOTPMessage(data: any): Promise<string> {
+  const otp = data.otp || '000000';
+  return `🔐 *Your Login OTP*\n\n` +
+    `Your one-time password is:\n\n` +
+    `*${otp}*\n\n` +
+    `This code will expire in 10 minutes.\n` +
+    `Do not share this code with anyone.\n\n` +
+    `If you didn't request this, please ignore this message.`;
 }
 
 export async function generateBookingConfirmationMessage(data: any): Promise<string> {
@@ -62,6 +73,8 @@ async function generateMessage(
   data: Record<string, any>
 ): Promise<string> {
   switch (messageType) {
+    case 'otp':
+      return generateOTPMessage(data);
     case 'booking_confirmation':
       return generateBookingConfirmationMessage(data);
     case 'payment_receipt':
@@ -81,6 +94,15 @@ export async function sendWhatsAppMessage(params: WhatsAppMessageParams): Promis
   error?: string;
 }> {
   try {
+    // Validate environment variables
+    if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
+      console.error('[v0] Missing Twilio credentials in environment variables');
+      return {
+        success: false,
+        error: 'Twilio credentials not configured',
+      };
+    }
+
     // Format phone number for Twilio
     const toNumber = params.phoneNumber.startsWith('+') 
       ? `whatsapp:${params.phoneNumber}` 
@@ -88,11 +110,18 @@ export async function sendWhatsAppMessage(params: WhatsAppMessageParams): Promis
 
     const messageBody = await generateMessage(params.messageType, params.data || {});
 
+    console.log('[v0] Sending WhatsApp message');
+    console.log('[v0] To:', toNumber);
+    console.log('[v0] From:', TWILIO_WHATSAPP_NUMBER);
+    console.log('[v0] Message type:', params.messageType);
+
     const message = await client.messages.create({
       from: TWILIO_WHATSAPP_NUMBER,
       to: toNumber,
       body: messageBody,
     });
+
+    console.log('[v0] Message sent successfully with SID:', message.sid);
 
     // Log the WhatsApp message in database
     try {
@@ -108,7 +137,7 @@ export async function sendWhatsAppMessage(params: WhatsAppMessageParams): Promis
         },
       });
     } catch (dbError) {
-      console.error('Failed to log WhatsApp message:', dbError);
+      console.error('[v0] Failed to log WhatsApp message:', dbError);
     }
 
     return {
@@ -117,7 +146,7 @@ export async function sendWhatsAppMessage(params: WhatsAppMessageParams): Promis
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('WhatsApp message sending error:', errorMessage);
+    console.error('[v0] WhatsApp message sending error:', errorMessage);
 
     // Log failed message attempt
     try {
@@ -133,7 +162,7 @@ export async function sendWhatsAppMessage(params: WhatsAppMessageParams): Promis
         },
       });
     } catch (dbError) {
-      console.error('Failed to log WhatsApp error:', dbError);
+      console.error('[v0] Failed to log WhatsApp error:', dbError);
     }
 
     return {

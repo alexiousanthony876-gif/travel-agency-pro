@@ -90,15 +90,17 @@ export async function POST(request: NextRequest) {
     });
 
     // Send OTP via WhatsApp
-    await sendWhatsAppMessage({
+    const otpResult = await sendWhatsAppMessage({
       userId: user.id,
       phoneNumber: normalizedPhone,
-      messageType: 'booking_confirmation',
+      messageType: 'otp',
       data: {
         otp,
         purpose: 'login',
       },
     });
+
+    console.log('[v0] OTP send result:', otpResult);
 
     return NextResponse.json(
       {
