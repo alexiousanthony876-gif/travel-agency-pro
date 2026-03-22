@@ -1,3 +1,50 @@
+# Dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# Testing
+/coverage
+
+# Next.js
+/.next/
+/out/
+
+# Production
+/build
+dist/
+
+# Misc
+.DS_Store
+*.pem
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Prisma
+prisma/*.db
+prisma/*.sqlite
+
+# IDE
+.vscode
+.idea
+*.iml
+*.swp
+*.swo
+*~
+
+# OS
+Thumbs.db
+
 # Compiled Java class files
 bin/
 *.class
@@ -5,12 +52,3 @@ bin/
 # SQLite database WAL/SHM temp files
 *.db-shm
 *.db-wal
-
-# IDE files
-.idea/
-*.iml
-.vscode/
-
-# OS files
-.DS_Store
-Thumbs.db

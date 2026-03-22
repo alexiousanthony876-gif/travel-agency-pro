@@ -1,0 +1,168 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  phoneNumber String   @unique
+  email     String?  @unique
+  firstName String
+  lastName  String
+  passwordHash String
+  role      String   @default("user") // user, admin
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  otps       OTP[]
+  bookings   Booking[]
+  payments   Payment[]
+  whatsappLogs WhatsAppLog[]
+
+  @@index([phoneNumber])
+}
+
+model OTP {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code      String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  isUsed    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Package {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String   @db.LongText
+  destination String
+  duration    Int      // in days
+  price       Float
+  capacity    Int
+  images      String   @db.JSON // array of image URLs
+  itinerary   String   @db.LongText
+  amenities   String   @db.JSON // array of amenities
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  bookings Booking[]
+
+  @@index([destination])
+  @@index([isActive])
+}
+
+model Hotel {
+  id          Int      @id @default(autoincrement())
+  name        String
+  location    String
+  description String   @db.LongText
+  price       Float    // per night
+  rating      Float
+  amenities   String   @db.JSON
+  images      String   @db.JSON
+  roomsAvailable Int
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  bookings Booking[]
+
+  @@index([location])
+  @@index([isActive])
+}
+
+model Booking {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  packageId   Int?
+  package     Package? @relation(fields: [packageId], references: [id], onDelete: SetNull)
+  hotelId     Int?
+  hotel       Hotel?   @relation(fields: [hotelId], references: [id], onDelete: SetNull)
+  
+  startDate   DateTime
+  endDate     DateTime
+  numberOfPeople Int
+  totalAmount Float
+  status      String   @default("pending") // pending, confirmed, cancelled
+  bookingReference String @unique
+  specialRequests String? @db.LongText
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  payment     Payment?
+  whatsappLogs WhatsAppLog[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([bookingReference])
+}
+
+model Payment {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookingId   Int      @unique
+  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  
+  amount      Float
+  method      String   // upi, card, netbanking
+  razorpayOrderId String? @unique
+  razorpayPaymentId String? @unique
+  status      String   @default("pending") // pending, completed, failed, refunded
+  transactionId String?
+  errorMessage String?
+  metadata    String   @db.JSON
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([razorpayOrderId])
+}
+
+model WhatsAppLog {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookingId   Int?
+  booking     Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  
+  phoneNumber String
+  messageType String   // booking_confirmation, payment_receipt, reminder, cancellation
+  messageBody String   @db.LongText
+  status      String   @default("pending") // pending, sent, failed
+  twilioSid   String?
+  errorDetails String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([status])
+}
+
+model AdminLog {
+  id          Int      @id @default(autoincrement())
+  adminId     Int
+  action      String
+  entityType  String   // User, Booking, Payment, etc
+  entityId    Int
+  changes     String   @db.JSON
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  @@index([adminId])
+  @@index([createdAt])
+}
